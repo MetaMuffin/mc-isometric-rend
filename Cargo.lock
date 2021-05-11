@@ -270,6 +270,7 @@ dependencies = [
  "imageproc",
  "integer-encoding",
  "integer-sqrt",
+ "lazy_static",
 ]
 
 [[package]]

@@ -11,4 +11,4 @@ byteorder = "*"
 integer-encoding = "*"
 imageproc = "*"
 integer-sqrt = "*"
-
+lazy_static = "*"
