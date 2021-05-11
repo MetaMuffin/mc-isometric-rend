@@ -15,7 +15,7 @@ const TEX_RESOLUTION: u32 = 16;
 
 fn main() {
     // let out_size = TEX_RESOLUTION * SEG_SIZE as u32;
-    let out_size = 512;
+    let out_size = 8196;
 
     let zseg_file = File::open(&Path::new("./input/seg.1.2.zseg")).unwrap();
     let mut zseg = BufReader::new(zseg_file);
@@ -62,50 +62,29 @@ fn main() {
 
     let mut imgbuf: ImageBuffer<Rgba<u8>, _> = image::ImageBuffer::new(out_size, out_size);
 
-    // for y in 40..45 {
-    //     println!("\x1b[2J");
-    //     for x in 0..SEG_SIZE {
-    //         for z in 0..SEG_SIZE {
-    //             match seg[y][x][z] {
-    //                 0xFFFF => (),
-    //                 103 => (),
-    //                 block_id => {
-    //                     println!("\x1b[{};{}f#", x, z);
-    //                     let tex = textures
-    //                         .get(&block_id)
-    //                         .expect("Found block that is not in the palette");
-
-    //                     // let map_fn = |(x, y, z)| (x - z, y + (x + z) / 2.0);
-    //                     let projection =
-    //                         imageproc::geometric_transformations::Projection::translate(
-    //                             (x * TEX_RESOLUTION as usize) as f32,
-    //                             (y * TEX_RESOLUTION as usize) as f32,
-    //                         );
-    //                     imageproc::geometric_transformations::warp_into(
-    //                         tex.as_rgba8().unwrap(),
-    //                         &projection,
-    //                         imageproc::geometric_transformations::Interpolation::Bicubic,
-    //                         Rgba::from([0, 0, 0, 0]),
-    //                         &mut imgbuf,
-    //                     );
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-
     for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
         // do some raytracing because muffins dont know how to do projection stuff
         if x == 0 {
             println!("{}\x1b[A\r", y);
         }
-        let (mut x, mut y, out_size, seg_size) = (x as f64, y as f64, out_size as f64, SEG_SIZE as f64);
-        x -= seg_size / 2.0;
-        y *= 255.0 / out_size;
-        x *= seg_size / out_size;
+        let (mut x, mut y, out_size, seg_size) =
+            (x as f64, y as f64, out_size as f64, SEG_SIZE as f64);
+        y /= out_size;
+        x /= out_size;
 
-        let mut ray = (SEG_SIZE as f64 - x - y, 255. + y + x, seg_size + x - y);
-        let ray_dir = (-0.1, -0.1, -0.1);
+        y = 1.0 - y;
+        x *= 2.0;
+        x -= 1.0;
+
+        y *= 255.0;
+        x *= seg_size;
+
+        let mut ray = (
+            seg_size + seg_size - x - y,
+            seg_size + y + x,
+            seg_size + seg_size + x - y,
+        );
+        let ray_dir = (-0.5, -0.5, -0.5);
         for _ in 0..(1 << 12) {
             let block = if ray.0 >= 0.0
                 && ray.0 < seg_size
@@ -117,39 +96,32 @@ fn main() {
                 let map_coord = (ray.0 as usize, ray.1 as usize, ray.2 as usize);
                 seg[map_coord.1][map_coord.0][map_coord.2]
             } else {
-                0xFFFE
+                0xFFFF
             };
             match block {
-                0xFFFF | 0xFFFE => {
+                0xFFFF => {
                     ray.0 += ray_dir.0;
                     ray.1 += ray_dir.1;
                     ray.2 += ray_dir.2;
                 }
-                103 => println!("This should not happen"),
+                103 => {
+                    println!("This should not happen");
+                    break;
+                }
                 block_id => {
+                    let map_coord_off = ((ray.0 + ray.1) % 1.0, (ray.0 + ray.2) % 1.0);
                     let tex = textures
                         .get(&block_id)
                         .expect("Found block that is not in the palette");
-                    *pixel = tex.get_pixel(0, 0);
+                    *pixel = tex.get_pixel(
+                        (map_coord_off.0 * TEX_RESOLUTION as f64) as u32,
+                        (map_coord_off.1 * TEX_RESOLUTION as f64) as u32,
+                    );
+                    break;
                 }
             }
         }
     }
 
     imgbuf.save(format!("public/generated/view.png")).unwrap();
-
-    // for (i, layer) in seg.iter().take(100).enumerate() {
-    //     println!("layer {}", i);
-    //     for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
-    //         let pos = (x / TEX_RESOLUTION, y / TEX_RESOLUTION);
-    //         let block_id = layer[pos.0 as usize][pos.1 as usize];
-    //         let tex = textures
-    //             .get(&block_id)
-    //             .expect("Found block that is not in the palette");
-    //         *pixel = tex.get_pixel(x % TEX_RESOLUTION, y % TEX_RESOLUTION)
-    //     }
-    //     imgbuf
-    //         .save(format!("public/generated/layer-{}.png", i).as_str())
-    //         .unwrap();
-    // }
 }
