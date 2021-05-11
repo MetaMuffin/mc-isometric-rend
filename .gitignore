@@ -1,4 +1,4 @@
-/target
-/node_modules
 /res
-/public/generated
+/public/segments
+/public/prerendered
+/target

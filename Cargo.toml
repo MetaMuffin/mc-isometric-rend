@@ -10,3 +10,5 @@ image = "*"
 byteorder = "*"
 integer-encoding = "*"
 imageproc = "*"
+integer-sqrt = "*"
+
