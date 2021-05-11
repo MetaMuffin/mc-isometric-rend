@@ -58,8 +58,8 @@ pub fn render_segment(name: &str) {
     );
 
     for y in 0..CHUNK_HEIGHT {
-        for x in 0..SEG_SIZE {
-            for z in 0..SEG_SIZE {
+        for x in (0..SEG_SIZE).rev() {
+            for z in (0..SEG_SIZE).rev() {
                 match seg[y][x][z] {
                     0xFFFF => (),
                     103 => (),

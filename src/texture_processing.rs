@@ -4,24 +4,31 @@ use std::path::Path;
 
 pub type Texture = ImageBuffer<Rgba<u8>, Vec<u8>>;
 
-pub fn biome_tint(source: Texture) -> Texture {
-    let biome_tint_color = (0, 255, 10);
+pub fn biome_tint(s: &Texture) -> Texture {
+    tint(s, (100, 200, 50))
+}
+
+pub fn tint(source: &Texture, tint: (u16, u16, u16)) -> Texture {
     let mut t = ImageBuffer::new(16, 16);
     for (x, y, p) in t.enumerate_pixels_mut() {
         let sp = source.get_pixel(x, y);
         *p = Rgba::from([
-            sp.0[0] * biome_tint_color.0,
-            sp.0[1] * biome_tint_color.1,
-            sp.0[2] * biome_tint_color.2,
+            (sp.0[0] as u16 * tint.0 / 255) as u8,
+            (sp.0[1] as u16 * tint.1 / 255) as u8,
+            (sp.0[2] as u16 * tint.2 / 255) as u8,
             sp.0[3],
         ])
     }
     return t;
 }
 
-pub fn generate_isometric_block_texture(block_name: &str) -> Texture {
-    let texture = block_texture(block_name);
-    make_full_block_texture_isometric(&texture, &texture)
+pub fn crop16(tex: &Texture) -> Texture {
+    let mut t = ImageBuffer::new(16, 16);
+    for (x, y, p) in t.enumerate_pixels_mut() {
+        let sp = tex.get_pixel(x, y);
+        *p = sp.clone();
+    }
+    return t;
 }
 
 pub fn block_texture(block_name: &str) -> Texture {
@@ -37,7 +44,11 @@ pub fn block_texture(block_name: &str) -> Texture {
     .into_rgba8()
 }
 
-pub fn make_full_block_texture_isometric(top: &Texture, side: &Texture) -> Texture {
+pub fn full_isometric(tex: &Texture) -> Texture {
+    full_isometric_sides(tex, tex)
+}
+
+pub fn full_isometric_sides(top: &Texture, side: &Texture) -> Texture {
     let projection_y = Projection::from_control_points(
         [(0.0, 0.0), (16.0, 0.0), (16.0, 16.0), (0.0, 16.0)],
         [(0.0, 4.0), (8.0, 0.0), (16.0, 4.0), (8.0, 8.0)],
@@ -74,6 +85,17 @@ pub fn make_full_block_texture_isometric(top: &Texture, side: &Texture) -> Textu
     );
 
     composite_block_faces(&vec![face_x, face_y, face_z])
+}
+
+pub fn crossed_planes(tex: &Texture) -> Texture {
+    let projection = Projection::scale(0.6, 0.6);
+
+    imageproc::geometric_transformations::warp(
+        &tex,
+        &projection,
+        imageproc::geometric_transformations::Interpolation::Nearest,
+        Rgba::from([0, 0, 0, 0]),
+    )
 }
 
 pub fn composite_block_faces(faces: &Vec<Texture>) -> Texture {
