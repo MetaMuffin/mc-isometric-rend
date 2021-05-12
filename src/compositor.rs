@@ -1,4 +1,3 @@
-
 use crate::block_texture::processed_block_texture;
 use byteorder::{NativeEndian, ReadBytesExt};
 use image::Rgba;
@@ -20,7 +19,7 @@ pub fn render_segment(name: &str) {
 
     {
         let zseg_file = File::open(&Path::new(
-            format!("./public/segments/{}.zseg", name).as_str(),
+            format!("./public/segments/{}", name).as_str(),
         ))
         .unwrap();
         let mut zseg = BufReader::new(zseg_file);
@@ -54,7 +53,7 @@ pub fn render_segment(name: &str) {
 
     let mut view: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(
         16 * SEG_SIZE as u32,
-        16 * (SEG_SIZE as u32 / 2 + CHUNK_HEIGHT as u32),
+        16 * (SEG_SIZE as u32 + CHUNK_HEIGHT as u32) / 2,
     );
 
     for y in 0..CHUNK_HEIGHT {
@@ -86,20 +85,16 @@ pub fn image_buffer_blit(
     for (x, y, source_pixel) in source.enumerate_pixels() {
         if target.in_bounds(x + offset.0, y + offset.1) {
             let target_pixel = target.get_pixel_mut(x + offset.0, y + offset.1);
-            // TODO linear alpha stuff
-            // let new_pixel = Rgba::from([
-            //     (target_pixel.0[0] * (255 - source_pixel.0[3])) / 255
-            //         + (source_pixel.0[0] * source_pixel.0[3]) / 255,
-            //     (target_pixel.0[1] * (255 - source_pixel.0[3])) / 255
-            //         + (source_pixel.0[1] * source_pixel.0[3]) / 255,
-            //     (target_pixel.0[2] * (255 - source_pixel.0[3])) / 255
-            //         + (source_pixel.0[2] * source_pixel.0[3]) / 255,
-            //     target_pixel.0[3].max(source_pixel.0[3]),
-            // ]);
-            let new_pixel = match source_pixel.0[3] > 128 {
-                true => source_pixel.clone(),
-                false => target_pixel.clone(),
-            };
+            let sa = source_pixel.0[3] as u16;
+            let new_pixel = Rgba::from([
+                ((target_pixel.0[0] as u16 * (255 - sa)) / 255
+                    + (source_pixel.0[0] as u16 * sa) / 255) as u8,
+                ((target_pixel.0[1] as u16 * (255 - sa)) / 255
+                    + (source_pixel.0[1] as u16 * sa) / 255) as u8,
+                ((target_pixel.0[2] as u16 * (255 - sa)) / 255
+                    + (source_pixel.0[2] as u16 * sa) / 255) as u8,
+                255 - (((255 - target_pixel.0[3] as u16) * (255 - sa)) / 255) as u8,
+            ]);
             *target_pixel = new_pixel;
         }
     }
@@ -110,7 +105,7 @@ pub fn isometric_coord_mapping(x: usize, y: usize, z: usize) -> (u32, u32) {
     let (x, y, z) = (x * 16, y * 16, z * 16);
     let (sx, sy) = (
         (SEG_SIZE * 16) as i32 / 2 + (x - z) / 2,
-        ((SEG_SIZE as i32 / 2 + CHUNK_HEIGHT as i32) * 16) - (y / 2 + (x + z) / 4),
+        (16 * (SEG_SIZE as i32 + CHUNK_HEIGHT as i32) / 2) - (y / 2 + (x + z) / 4),
     );
     (sx as u32, sy as u32)
 }

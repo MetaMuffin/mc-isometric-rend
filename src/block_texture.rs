@@ -12,13 +12,22 @@ pub fn processed_block_texture(name: &str) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
         "oak_leaves" | "birch_leaves" | "acacia_leaves" | "jungle_leaves" | "dark_oak_leaves"
         | "spruce_leaves" => full_isometric(&biome_tint(&auto_block_texture())),
         "grass" => crossed_planes(&biome_tint(&auto_block_texture())),
-        "dandelion" => crossed_planes(&auto_block_texture()),
+        "dandelion" | "orange_tulip" | "azure_bluet" | "allium" | "poppy" | "cornflower" => {
+            crossed_planes(&auto_block_texture())
+        }
+        "lilac" | "peony" | "rose_bush" | "tall_grass" => crossed_planes(&auto_block_texture()),
         "water" => full_isometric_sides(
             &crop16(&tint(&block_texture("water_still"), (0, 0, 255))),
-            &crop16(&tint(&block_texture("water_flowing"), (0, 0, 255))),
+            &crop16(&tint(&block_texture("water_flow"), (0, 0, 255))),
         ),
+        "lava" => full_isometric_sides(
+            &crop16(&block_texture("lava_still")),
+            &crop16(&block_texture("lava_flow")),
+        ),
+
+        "removed" => block_texture("debug2"),
         _ => {
-            println!("Found some '{}', that has no special case.", name);
+            // println!("{}", name);
             full_isometric(&auto_block_texture())
         }
     }

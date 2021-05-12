@@ -1,10 +1,17 @@
 #![feature(cstring_from_vec_with_nul)]
 #![feature(str_split_once)]
 
-pub mod texture_processing;
+use std::path::Path;
+
 pub mod block_texture;
 pub mod compositor;
+pub mod texture_processing;
 
 fn main() {
-    compositor::render_segment("seg.1.2");
+    let files = std::fs::read_dir(&Path::new("./public/segments/")).unwrap();
+    for s in files {
+        let filename = String::from(s.unwrap().file_name().to_str().unwrap());
+        println!("Rendering {}...", filename);
+        compositor::render_segment(&filename);
+    }
 }
