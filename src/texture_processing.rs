@@ -31,6 +31,14 @@ pub fn crop16(tex: &Texture) -> Texture {
     return t;
 }
 
+pub fn transparent() -> Texture {
+    let mut t = ImageBuffer::new(16, 16);
+    for (_,_,p) in t.enumerate_pixels_mut() {
+        *p = Rgba::from([0,0,0,255])
+    }
+    return t;
+}
+
 pub fn block_texture(block_name: &str) -> Texture {
     image::open(&Path::new(
         format!("./res/assets/minecraft/textures/block/{}.png", block_name).as_str(),

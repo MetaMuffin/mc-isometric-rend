@@ -17,11 +17,11 @@ pub fn render_segment(name: &str) {
     let mut seg = vec![[[0xFFFFu16; SEG_SIZE]; SEG_SIZE]; 255];
     let mut textures: HashMap<u16, ImageBuffer<Rgba<u8>, Vec<u8>>> = HashMap::new();
 
+    textures.insert(0xFFFE, processed_block_texture("removed"));
+
     {
-        let zseg_file = File::open(&Path::new(
-            format!("./public/segments/{}", name).as_str(),
-        ))
-        .unwrap();
+        let zseg_file =
+            File::open(&Path::new(format!("./public/segments/{}", name).as_str())).unwrap();
         let mut zseg = BufReader::new(zseg_file);
         loop {
             let mut block_name_raw = vec![];
@@ -40,8 +40,17 @@ pub fn render_segment(name: &str) {
         loop {
             match zseg.read_varint::<usize>() {
                 Ok(dist) => {
+                    let block_id_raw = zseg.read_u16::<NativeEndian>().unwrap();
+                    let block_id = block_id_raw & 0x7fff;
+                    // let is_removed = (block_id_raw & 0x8000) != 0;
+                    // for _ in (c + 1)..(c + dist - 1) {
+                    //     seg[(c / SEG_SIZE / SEG_SIZE)][c % SEG_SIZE][(c / SEG_SIZE) % SEG_SIZE] =
+                    //         match is_removed {
+                    //             false => 0xFFFF,
+                    //             true => 0xFFFE,
+                    //         }
+                    // }
                     c += dist;
-                    let block_id = zseg.read_u16::<NativeEndian>().unwrap() & 0x7fff;
                     seg[(c / SEG_SIZE / SEG_SIZE)][c % SEG_SIZE][(c / SEG_SIZE) % SEG_SIZE] =
                         block_id;
                     c += 1

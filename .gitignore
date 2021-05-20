@@ -1,4 +1,4 @@
 /res
-/public/segments
-/public/prerendered
+/public/segments*
+/public/prerendered*
 /target

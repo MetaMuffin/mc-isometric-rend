@@ -24,8 +24,11 @@ pub fn processed_block_texture(name: &str) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
             &crop16(&block_texture("lava_still")),
             &crop16(&block_texture("lava_flow")),
         ),
+        "vine" => full_isometric(&biome_tint(&auto_block_texture())),
+        "lily_pad" => crossed_planes(&biome_tint(&auto_block_texture())),
+        "sugar_cane" => crossed_planes(&auto_block_texture()),
 
-        "removed" => block_texture("debug2"),
+        "removed" => full_isometric(&transparent()),
         _ => {
             // println!("{}", name);
             full_isometric(&auto_block_texture())
