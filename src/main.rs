@@ -4,6 +4,7 @@
 pub mod texture_processing;
 pub mod block_texture;
 pub mod compositor;
+pub mod seg_parser;
 
 fn main() {
     compositor::render_segment("seg.1.2");
