@@ -1,4 +1,3 @@
-
 use crate::block_texture::processed_block_texture;
 use byteorder::{NativeEndian, ReadBytesExt};
 use image::Rgba;
@@ -13,6 +12,16 @@ use std::{
 
 pub const SEG_SIZE: usize = 16 * 8;
 pub const CHUNK_HEIGHT: usize = 255;
+
+fn zseg_index_to_xyz(n: usize) -> (i32, i32, i32) {
+    let (x, z, y) = (
+        n % SEG_SIZE,
+       (n / SEG_SIZE) % SEG_SIZE,
+        n / SEG_SIZE / SEG_SIZE
+    );
+
+    (x as i32, y as i32, z as i32)
+}
 
 pub fn render_segment(name: &str) {
     let mut seg = vec![[[0xFFFFu16; SEG_SIZE]; SEG_SIZE]; 255];
@@ -43,8 +52,8 @@ pub fn render_segment(name: &str) {
                 Ok(dist) => {
                     c += dist;
                     let block_id = zseg.read_u16::<NativeEndian>().unwrap() & 0x7fff;
-                    seg[(c / SEG_SIZE / SEG_SIZE)][c % SEG_SIZE][(c / SEG_SIZE) % SEG_SIZE] =
-                        block_id;
+                    let (x, y, z) = zseg_index_to_xyz(c);
+                    seg[y as usize][x as usize][z as usize] = block_id;
                     c += 1
                 }
                 Err(_e) => break,
