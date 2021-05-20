@@ -6,6 +6,7 @@ use std::path::Path;
 pub mod block_texture;
 pub mod compositor;
 pub mod texture_processing;
+pub mod seg_parser;
 
 fn main() {
     let files = std::fs::read_dir(&Path::new("./public/segments/")).unwrap();

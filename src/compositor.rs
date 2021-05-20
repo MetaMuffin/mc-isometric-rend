@@ -1,63 +1,26 @@
 use crate::block_texture::processed_block_texture;
-use byteorder::{NativeEndian, ReadBytesExt};
+use crate::seg_parser::SegmentReader;
 use image::Rgba;
 use image::{GenericImageView, ImageBuffer};
-use integer_encoding::VarIntReader;
-use std::{
-    collections::HashMap,
-    fs::File,
-    io::{BufRead, BufReader},
-    path::Path,
-};
+use std::collections::HashMap;
 
 pub const SEG_SIZE: usize = 16 * 8;
 pub const CHUNK_HEIGHT: usize = 255;
 
 pub fn render_segment(name: &str) {
+    // seg has to be a vector because otherwise it is bigger than the stack. could
+    // maybe be a box of an array instead, if that is faster
     let mut seg = vec![[[0xFFFFu16; SEG_SIZE]; SEG_SIZE]; 255];
     let mut textures: HashMap<u16, ImageBuffer<Rgba<u8>, Vec<u8>>> = HashMap::new();
 
-    textures.insert(0xFFFE, processed_block_texture("removed"));
+    let mut segrd = SegmentReader::new(name);
+    for (block_name, block_id) in segrd.iter_palette() {
+        let isometric = processed_block_texture(&block_name.as_str());
+        textures.insert(block_id, isometric);
+    }
 
-    {
-        let zseg_file =
-            File::open(&Path::new(format!("./public/segments/{}", name).as_str())).unwrap();
-        let mut zseg = BufReader::new(zseg_file);
-        loop {
-            let mut block_name_raw = vec![];
-            zseg.read_until(0x00, &mut block_name_raw).unwrap();
-            block_name_raw.pop();
-            let block_id = zseg.read_u16::<NativeEndian>().unwrap();
-            if block_name_raw.len() == 0 {
-                break;
-            };
-            let block_name = String::from_utf8(block_name_raw).unwrap();
-
-            let isometric = processed_block_texture(&block_name.as_str());
-            textures.insert(block_id, isometric);
-        }
-        let mut c = 0;
-        loop {
-            match zseg.read_varint::<usize>() {
-                Ok(dist) => {
-                    let block_id_raw = zseg.read_u16::<NativeEndian>().unwrap();
-                    let block_id = block_id_raw & 0x7fff;
-                    // let is_removed = (block_id_raw & 0x8000) != 0;
-                    // for _ in (c + 1)..(c + dist - 1) {
-                    //     seg[(c / SEG_SIZE / SEG_SIZE)][c % SEG_SIZE][(c / SEG_SIZE) % SEG_SIZE] =
-                    //         match is_removed {
-                    //             false => 0xFFFF,
-                    //             true => 0xFFFE,
-                    //         }
-                    // }
-                    c += dist;
-                    seg[(c / SEG_SIZE / SEG_SIZE)][c % SEG_SIZE][(c / SEG_SIZE) % SEG_SIZE] =
-                        block_id;
-                    c += 1
-                }
-                Err(_e) => break,
-            }
-        }
+    for (x, y, z, block_id) in segrd.iter_blocks() {
+        seg[y as usize][x as usize][z as usize] = block_id;
     }
 
     let mut view: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(
@@ -66,14 +29,16 @@ pub fn render_segment(name: &str) {
     );
 
     for y in 0..CHUNK_HEIGHT {
-        for x in (0..SEG_SIZE).rev() {
-            for z in (0..SEG_SIZE).rev() {
+        for x in 0..SEG_SIZE {
+            for z in 0..SEG_SIZE {
                 match seg[y][x][z] {
                     0xFFFF => (),
                     103 => (),
                     block_id => {
                         // println!("{}-{}-{}: {}\x1b[A\r", x, y, z, block_id);
-                        let coords = isometric_coord_mapping(x, y, z);
+                        let coords = isometric_coord_mapping(
+                            x as i32, y as i32, z as i32
+                        );
                         let texture = textures.get(&block_id).expect("asdasd");
                         image_buffer_blit(&mut view, texture, coords);
                     }
@@ -109,12 +74,18 @@ pub fn image_buffer_blit(
     }
 }
 
-pub fn isometric_coord_mapping(x: usize, y: usize, z: usize) -> (u32, u32) {
-    let (x, y, z) = (x as i32, y as i32, z as i32);
-    let (x, y, z) = (x * 16, y * 16, z * 16);
-    let (sx, sy) = (
-        (SEG_SIZE * 16) as i32 / 2 + (x - z) / 2,
-        (16 * (SEG_SIZE as i32 + CHUNK_HEIGHT as i32) / 2) - (y / 2 + (x + z) / 4),
-    );
-    (sx as u32, sy as u32)
+const fn isometric_coord_mapping(x: i32, y: i32, z: i32) -> (u32, u32) {
+    const BASE_X: i32 = 1020;
+    const BASE_Y: i32 = 4072;
+
+    const XDIFF: (i32, i32) = (-8,  4);
+    const ZDIFF: (i32, i32) = ( 8,  4);
+    const YDIFF: (i32, i32) = ( 0, -8);
+
+    let diff = (XDIFF.0 * x + YDIFF.0 * y + ZDIFF.0 * z,
+                XDIFF.1 * x + YDIFF.1 * y + ZDIFF.1 * z);
+
+    let coords = (BASE_X + diff.0, BASE_Y + diff.1);
+
+    (coords.0 as u32, coords.1 as u32)
 }
