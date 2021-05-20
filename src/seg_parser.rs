@@ -34,7 +34,7 @@ pub struct BlockIterator<'a> {
 impl SegmentReader {
     pub fn new(name: &str) -> SegmentReader {
         let f = File::open(&Path::new(
-            format!("./public/segments/{}.zseg", name).as_str())).unwrap();
+            format!("./public/segments/{}", name).as_str())).unwrap();
 
         SegmentReader{
             f: Some(BufReader::new(f)),

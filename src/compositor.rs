@@ -4,13 +4,13 @@ use image::Rgba;
 use image::{GenericImageView, ImageBuffer};
 use std::collections::HashMap;
 
-pub const SEG_SIZE: usize = 16 * 8;
-pub const CHUNK_HEIGHT: usize = 255;
+const SEG_SIZE: usize = 16 * 8;
+const CHUNK_HEIGHT: usize = 256;
 
 pub fn render_segment(name: &str) {
     // seg has to be a vector because otherwise it is bigger than the stack. could
     // maybe be a box of an array instead, if that is faster
-    let mut seg = vec![[[0xFFFFu16; SEG_SIZE]; SEG_SIZE]; 255];
+    let mut seg = vec![[[0xFFFFu16; SEG_SIZE]; SEG_SIZE]; CHUNK_HEIGHT];
     let mut textures: HashMap<u16, ImageBuffer<Rgba<u8>, Vec<u8>>> = HashMap::new();
 
     let mut segrd = SegmentReader::new(name);
@@ -51,7 +51,7 @@ pub fn render_segment(name: &str) {
         .unwrap();
 }
 
-pub fn image_buffer_blit(
+fn image_buffer_blit(
     target: &mut ImageBuffer<Rgba<u8>, Vec<u8>>,
     source: &ImageBuffer<Rgba<u8>, Vec<u8>>,
     offset: (u32, u32),
@@ -76,7 +76,7 @@ pub fn image_buffer_blit(
 
 const fn isometric_coord_mapping(x: i32, y: i32, z: i32) -> (u32, u32) {
     const BASE_X: i32 = 1020;
-    const BASE_Y: i32 = 4072;
+    const BASE_Y: i32 = 2040;
 
     const XDIFF: (i32, i32) = (-8,  4);
     const ZDIFF: (i32, i32) = ( 8,  4);
