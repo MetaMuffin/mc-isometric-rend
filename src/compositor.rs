@@ -1,7 +1,7 @@
 use crate::block_texture::processed_block_texture;
 use crate::seg_parser::SegmentReader;
 use image::Rgba;
-use image::{GenericImageView, ImageBuffer};
+use image::ImageBuffer;
 use std::collections::HashMap;
 
 const SEG_SIZE: usize = 16 * 8;

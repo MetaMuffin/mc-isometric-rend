@@ -1,5 +1,4 @@
 #![feature(cstring_from_vec_with_nul)]
-#![feature(str_split_once)]
 #![feature(array_zip)]
 
 use std::path::Path;
