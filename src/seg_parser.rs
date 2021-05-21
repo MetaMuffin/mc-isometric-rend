@@ -2,9 +2,11 @@ use byteorder::{NativeEndian, ReadBytesExt};
 use integer_encoding::VarIntReader;
 use std::{
     fs::File,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, Read, Seek, SeekFrom},
     path::Path,
+    boxed::Box,
 };
+use zstd::stream::read::Decoder;
 
 pub const SEG_SIZE: usize = 16 * 8;
 pub const CHUNK_HEIGHT: usize = 255;
@@ -16,28 +18,41 @@ enum SegmentState {
 }
 
 pub struct SegmentReader {
-    f: Option<BufReader<File>>,
+    f: Option<BufReader<Box<dyn Read>>>,
     state: SegmentState,
 }
 
 pub struct PaletteIterator<'a> {
-    f: Option<BufReader<File>>,
+    f: Option<BufReader<Box<dyn Read>>>,
     file_owner: &'a mut SegmentReader,
 }
 
 pub struct BlockIterator<'a> {
-    f: Option<BufReader<File>>,
+    f: Option<BufReader<Box<dyn Read>>>,
     file_owner: &'a mut SegmentReader,
     off: usize,
 }
 
 impl SegmentReader {
     pub fn new(name: &str) -> SegmentReader {
-        let f = File::open(&Path::new(
+        let mut f = File::open(&Path::new(
             format!("./public/segments/{}", name).as_str())).unwrap();
 
+        let mut magic_buf: [u8; 4] = [0; 4];
+        let magic: [u8; 4] = [ 0x28, 0xb5, 0x2f, 0xfd ];
+        f.read_exact(&mut magic_buf).unwrap();
+        let is_compressed = magic_buf.iter()
+            .zip(magic.iter())
+            .fold(true, |a, (x,y)| a && x == y);
+        f.seek(SeekFrom::Start(0)).unwrap();
+
+        let reader_box: Box<dyn Read> = match is_compressed {
+            false => Box::new(f),
+            true => Box::new(Decoder::new(f).unwrap())
+        };
+
         SegmentReader{
-            f: Some(BufReader::new(f)),
+            f: Some(BufReader::new(reader_box)),
             state: SegmentState::Start
         }
     }
